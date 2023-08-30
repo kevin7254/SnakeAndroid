@@ -1,5 +1,6 @@
 package com.example.snakegame
 
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path.Direction
@@ -9,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import com.example.snakegame.databinding.ActivityMainBinding
@@ -16,10 +18,12 @@ import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var context: Context
     private lateinit var binding: ActivityMainBinding
     private lateinit var handler: Handler
     private lateinit var gameRunnable: Runnable
     private lateinit var snakeSegments: MutableList<SnakeSegment>
+    private lateinit var gestureDetector: GestureDetector
     private var running = false
     private val frameRate = 128L
 
@@ -35,12 +39,14 @@ class MainActivity : AppCompatActivity() {
     private var previousY = 0
     private var currentDirection = Direction.RIGHT // Initial direction
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         val view = binding.root
         setContentView(view)
 
+        context = applicationContext
         handler = Handler(Looper.getMainLooper())
         val displayMetrics = resources.displayMetrics
         screenHeight = displayMetrics.heightPixels
@@ -65,41 +71,13 @@ class MainActivity : AppCompatActivity() {
                 stopGameLoop()
             }
         })
+
+        initGestureDectector()
     }
 
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                Log.d(Companion::class.java.toString(), "action down")
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                val deltaX = event.x - previousX
-                val deltaY = event.y - previousY
-
-                if (abs(deltaX) > abs(deltaY)) {
-                    //Horizontal swipe
-                    if (deltaX > 0) {
-                        Log.d(Companion::class.java.toString(), "action right move")
-                        changeDirection(Direction.RIGHT)
-                    } else {
-                        Log.d(Companion::class.java.toString(), "action left move")
-                        changeDirection(Direction.LEFT)
-                    }
-                } else {
-                    //Vertical swipe
-                    if (deltaY > 0) {
-                        Log.d(Companion::class.java.toString(), "action down move")
-                        changeDirection(Direction.DOWN)
-                    } else {
-                        Log.d(Companion::class.java.toString(), "action up move")
-                        changeDirection(Direction.UP)
-                    }
-                }
-                previousX = event.x.toInt()
-                previousY = event.y.toInt()
-            }
-        }
+        gestureDetector.onTouchEvent(event)
         return true
     }
 
@@ -160,13 +138,16 @@ class MainActivity : AppCompatActivity() {
             color = Color.GREEN
             style = Paint.Style.FILL
         }
-        canvas.drawRect(
-            snakeX.toFloat(),
-            snakeY.toFloat(),
-            (snakeX + CELL_SIZE).toFloat(),
-            (snakeY + CELL_SIZE).toFloat(),
-            snakePaint
-        )
+
+        snakeSegments.forEach {
+            canvas.drawRect(
+                it.x.toFloat(),
+                it.y.toFloat(),
+                (it.x + CELL_SIZE).toFloat(),
+                (it.y + CELL_SIZE).toFloat(),
+                snakePaint
+            )
+        }
 
         val applePaint = Paint().apply {
             color = Color.RED
@@ -197,6 +178,70 @@ class MainActivity : AppCompatActivity() {
         val randomX = (0 until maxX).random() * FOOD_RADIUS
         val randomY = (0 until maxY).random() * FOOD_RADIUS
         return Pair(randomX, randomY)
+    }
+
+    private fun initGestureDectector() {
+        gestureDetector =
+            GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+                override fun onFling(
+                    e1: MotionEvent,
+                    e2: MotionEvent,
+                    velocityX: Float,
+                    velocityY: Float
+                ): Boolean {
+                    val deltaX = e2.x - e1.x
+                    val deltaY = e2.y - e1.y
+
+                    if (abs(deltaX) > abs(deltaY) && abs(deltaX) > 100 && abs(velocityX) > 100) {
+                        //Horizontal swipe
+                        if (deltaX > 0) {
+                            Log.d(Companion::class.java.toString(), "action right move")
+                            changeDirection(Direction.RIGHT)
+                        } else {
+                            Log.d(Companion::class.java.toString(), "action left move")
+                            changeDirection(Direction.LEFT)
+                        }
+                        return true
+                    } else if (abs(deltaY) > 100 && abs(velocityY) > 100) {
+                        //Vertical swipe
+                        if (deltaY > 0) {
+                            Log.d(Companion::class.java.toString(), "action down move")
+                            changeDirection(Direction.DOWN)
+                        } else {
+                            Log.d(Companion::class.java.toString(), "action up move")
+                            changeDirection(Direction.UP)
+                        }
+                        return true
+                    }
+                    return false
+                }
+
+                override fun onSingleTapUp(event: MotionEvent): Boolean {
+                    lateinit var direction: Direction
+
+                    if (currentDirection == Direction.LEFT || currentDirection == Direction.RIGHT) {
+                        // Clicked over snake
+                        if (event.y < snakeY + CELL_SIZE) {
+                            direction = Direction.UP
+                        }
+                        // Clicked under snake
+                        else if (event.y > snakeY + CELL_SIZE) {
+                            direction = Direction.DOWN
+                        }
+                    } else if (currentDirection == Direction.UP || currentDirection == Direction.DOWN) {
+                        // Clicked left of snake
+                        if (event.x < snakeX + CELL_SIZE) {
+                            direction = Direction.LEFT
+                        }
+                        // Clicked right of snake
+                        else if (event.x > snakeX + CELL_SIZE) {
+                            direction = Direction.RIGHT
+                        }
+                    }
+                    changeDirection(direction)
+                    return true
+                }
+            })
     }
 
     companion object {
