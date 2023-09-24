@@ -16,6 +16,8 @@ import android.view.SurfaceHolder
 import com.example.snakegame.databinding.ActivityMainBinding
 import kotlin.math.abs
 
+import com.example.snakegame.model.SnakeDirection
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var context: Context
@@ -35,9 +37,8 @@ class MainActivity : AppCompatActivity() {
     private var foodY = 0
     private var screenHeight = 0
     private var screenWidth = 0
-    private var previousX = 0
-    private var previousY = 0
-    private var currentDirection = Direction.RIGHT // Initial direction
+    private var movementProgress = 0f
+    private var currentDirection = SnakeDirection.RIGHT // Initial direction
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,7 +82,7 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
-    private fun changeDirection(newDirection: Direction) {
+    private fun changeDirection(newDirection: SnakeDirection) {
         if (currentDirection != newDirection) {
             currentDirection = newDirection
         }
@@ -105,11 +106,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateGame() {
+        if (movementProgress < 1.0f) {
+            // Calculate the next position based on movement progress
+            val nextX = lerp(previousX.toFloat(), snakeX.toFloat(), movementProgress)
+            val nextY = lerp(previousY.toFloat(), snakeY.toFloat(), movementProgress)
+
+            // Update the snake's position
+            snakeX = nextX.toInt()
+            snakeY = nextY.toInt()
+
+            // Increment the movement progress
+            movementProgress += MOVEMENT_STEP
+        }
+
         when (currentDirection) {
-            Direction.DOWN -> snakeY += CELL_SIZE
-            Direction.UP -> snakeY -= CELL_SIZE
-            Direction.LEFT -> snakeX -= CELL_SIZE
-            Direction.RIGHT -> snakeX += CELL_SIZE
+            SnakeDirection.DOWN -> snakeY += CELL_SIZE
+            SnakeDirection.UP -> snakeY -= CELL_SIZE
+            SnakeDirection.LEFT -> snakeX -= CELL_SIZE
+            SnakeDirection.RIGHT -> snakeX += CELL_SIZE
         }
 
         for (i in snakeSegments.size - 1 downTo 1) {
@@ -196,20 +210,20 @@ class MainActivity : AppCompatActivity() {
                         //Horizontal swipe
                         if (deltaX > 0) {
                             Log.d(Companion::class.java.toString(), "action right move")
-                            changeDirection(Direction.RIGHT)
+                            changeDirection(SnakeDirection.RIGHT)
                         } else {
                             Log.d(Companion::class.java.toString(), "action left move")
-                            changeDirection(Direction.LEFT)
+                            changeDirection(SnakeDirection.LEFT)
                         }
                         return true
                     } else if (abs(deltaY) > 100 && abs(velocityY) > 100) {
                         //Vertical swipe
                         if (deltaY > 0) {
                             Log.d(Companion::class.java.toString(), "action down move")
-                            changeDirection(Direction.DOWN)
+                            changeDirection(SnakeDirection.DOWN)
                         } else {
                             Log.d(Companion::class.java.toString(), "action up move")
-                            changeDirection(Direction.UP)
+                            changeDirection(SnakeDirection.UP)
                         }
                         return true
                     }
@@ -217,25 +231,25 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onSingleTapUp(event: MotionEvent): Boolean {
-                    lateinit var direction: Direction
+                    lateinit var direction: SnakeDirection
 
-                    if (currentDirection == Direction.LEFT || currentDirection == Direction.RIGHT) {
+                    if (currentDirection == SnakeDirection.LEFT || currentDirection == SnakeDirection.RIGHT) {
                         // Clicked over snake
                         if (event.y < snakeY + CELL_SIZE) {
-                            direction = Direction.UP
+                            direction = SnakeDirection.UP
                         }
                         // Clicked under snake
                         else if (event.y > snakeY + CELL_SIZE) {
-                            direction = Direction.DOWN
+                            direction = SnakeDirection.DOWN
                         }
-                    } else if (currentDirection == Direction.UP || currentDirection == Direction.DOWN) {
+                    } else if (currentDirection == SnakeDirection.UP || currentDirection == SnakeDirection.DOWN) {
                         // Clicked left of snake
                         if (event.x < snakeX + CELL_SIZE) {
-                            direction = Direction.LEFT
+                            direction = SnakeDirection.LEFT
                         }
                         // Clicked right of snake
                         else if (event.x > snakeX + CELL_SIZE) {
-                            direction = Direction.RIGHT
+                            direction = SnakeDirection.RIGHT
                         }
                     }
                     changeDirection(direction)
@@ -249,9 +263,6 @@ class MainActivity : AppCompatActivity() {
         private const val FOOD_RADIUS = 70
     }
 
-    enum class Direction {
-        UP, DOWN, LEFT, RIGHT
-    }
 
     data class SnakeSegment(val x: Int, val y: Int)
 }
