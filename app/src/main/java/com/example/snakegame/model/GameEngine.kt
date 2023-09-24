@@ -1,9 +1,13 @@
 package com.example.snakegame.model
 
-
+import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import com.example.snakegame.viewmodel.SnakeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -13,8 +17,7 @@ import kotlin.random.Random
 
 class GameEngine(
     private val scope: CoroutineScope,
-    private val onGameEnded: () -> Unit,
-    private val onFoodEaten: () -> Unit,
+    private val snakeViewModel: SnakeViewModel,
 ) {
     private val mutex = Mutex()
     private val mutableStateFlow: MutableStateFlow<State> = MutableStateFlow(
@@ -24,9 +27,23 @@ class GameEngine(
             currentDirection = SnakeDirection.RIGHT,
         )
     )
-    val state = mutableStateFlow
 
     private val currentDirection = MutableLiveData<SnakeDirection>()
+
+    internal val snakePositionLiveData = MutableLiveData<List<SnakeSegment>>()
+
+    internal val foodPositionLiveData = MutableLiveData<Food>()
+
+    val state: Flow<State> = mutableStateFlow
+
+    // internal val scoreLiveData = MutableLiveData<Int>() TODO
+
+    // Function to update the LiveData properties when game state changes
+    private fun updateGameState(state: State) {
+        snakePositionLiveData.value = state.snake
+        // foodPositionLiveData.value = state.food
+        // _scoreLiveData.value = state.score
+    }
 
 
     var move = Pair(1, 0)
@@ -38,29 +55,44 @@ class GameEngine(
             }
         }
 
+    fun reset() {
+        mutableStateFlow.update {
+            it.copy(
+                food = Food(5, 5),
+                snake = listOf(SnakeSegment(7, 7)),
+                currentDirection = SnakeDirection.RIGHT
+            )
+        }
+        currentDirection.value = SnakeDirection.RIGHT
+        move = Pair(1, 0)
+    }
 
-    init {
+
+    internal fun startGame() {
         var snakeLength = 2
         scope.launch {
             while (true) {
-                delay(150)
-                mutableStateFlow.update {
+                delay(250)
+                mutableStateFlow.update { state ->
+                    //Log.d("Kevin", state.toString())
                     val hasReachedLeftEnd =
-                        (it.snake.first().x == 0) && it.currentDirection == SnakeDirection.LEFT
+                        (state.snake.first().x == 0) &&
+                                state.currentDirection == SnakeDirection.LEFT
                     val hasReachedTopEnd =
-                        (it.snake.first().y == 0) && it.currentDirection == SnakeDirection.UP
+                        (state.snake.first().y == 0) &&
+                                state.currentDirection == SnakeDirection.UP
                     val hasReachedRightEnd =
-                        (it.snake.first().x == BOARD_SIZE - 1)
-                                && it.currentDirection == SnakeDirection.RIGHT
+                        (state.snake.first().x == BOARD_SIZE - 1) &&
+                                state.currentDirection == SnakeDirection.RIGHT
                     val hasReachedBottomEnd =
-                        (it.snake.first().y == BOARD_SIZE - 1)
-                                && it.currentDirection == SnakeDirection.DOWN
+                        (state.snake.first().y == BOARD_SIZE - 1) &&
+                                state.currentDirection == SnakeDirection.DOWN
 
                     if (hasReachedLeftEnd || hasReachedTopEnd ||
                         hasReachedRightEnd || hasReachedBottomEnd
                     ) {
                         snakeLength = 2
-                        onGameEnded.invoke()
+                        snakeViewModel.onGameEnded()
                     }
 
                     if (move.first == 0 && move.second == -1) {
@@ -73,28 +105,32 @@ class GameEngine(
                         currentDirection.value = SnakeDirection.DOWN
                     }
 
-                    val newSnakePosition = it.snake.first().let {
+                    val newSnakePosition = state.snake.first().let {
                         mutex.withLock {
                             SnakeSegment(
-                                (it.x + move.first + BOARD_SIZE) % BOARD_SIZE,
-                                (it.y + move.second + BOARD_SIZE) % BOARD_SIZE,
+                                (it.x + move.first),
+                                (it.y + move.second),
                             )
                         }
                     }
 
-                    if (newSnakePosition.areEqual(it.food)) {
-                        onFoodEaten.invoke()
+                    if (newSnakePosition.areEqual(state.food)) {
+                        foodPositionLiveData.value = state.food
+                        snakeViewModel.onFoodEaten()
+                        snakeLength++
                     }
 
-                    if (it.snake.contains(newSnakePosition)) {
+                    if (state.snake.contains(newSnakePosition)) {
                         snakeLength = 2
-                        onGameEnded.invoke()
+                        snakeViewModel.onGameEnded()
                     }
-                    it.copy(
-                        food = getFood(newSnakePosition, it.food),
-                        snake = listOf(newSnakePosition) + it.snake.take(snakeLength - 1),
+
+                    val s = (listOf(newSnakePosition) + state.snake.take(snakeLength - 1))
+                    state.copy(
+                        food = getFood(newSnakePosition, state.food),
+                        snake = listOf(newSnakePosition) + state.snake.take(snakeLength - 1),
                         currentDirection = currentDirection.value!!,
-                    )
+                    ).also { updateGameState(it) }
                 }
             }
         }
@@ -103,14 +139,13 @@ class GameEngine(
 
     private fun getFood(snakeSegment: SnakeSegment, food: Food): Food {
         return if (snakeSegment.areEqual(food)) Food(
-            Random.nextInt(BOARD_SIZE),
-            Random.nextInt(BOARD_SIZE)
+            Random.nextInt(BOARD_SIZE), Random.nextInt(BOARD_SIZE)
         )
         else food
     }
 
     companion object {
-        const val BOARD_SIZE = 32
+        const val BOARD_SIZE = 70
     }
 
 }

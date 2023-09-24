@@ -3,12 +3,8 @@ package com.example.snakegame
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Path.Direction
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -17,27 +13,23 @@ import com.example.snakegame.databinding.ActivityMainBinding
 import kotlin.math.abs
 
 import com.example.snakegame.model.SnakeDirection
+import com.example.snakegame.model.SnakeSegment
+import com.example.snakegame.viewmodel.SnakeViewModel
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var context: Context
     private lateinit var binding: ActivityMainBinding
-    private lateinit var handler: Handler
-    private lateinit var gameRunnable: Runnable
     private lateinit var snakeSegments: MutableList<SnakeSegment>
     private lateinit var gestureDetector: GestureDetector
-    private var running = false
-    private val frameRate = 128L
+    private lateinit var snakeViewModel: SnakeViewModel
 
     private var initialX = 0
     private var initialY = 0
     private var snakeX = 0
     private var snakeY = 0
-    private var foodX = 0
-    private var foodY = 0
     private var screenHeight = 0
     private var screenWidth = 0
-    private var movementProgress = 0f
     private var currentDirection = SnakeDirection.RIGHT // Initial direction
 
 
@@ -48,20 +40,19 @@ class MainActivity : AppCompatActivity() {
         setContentView(view)
 
         context = applicationContext
-        handler = Handler(Looper.getMainLooper())
+
         val displayMetrics = resources.displayMetrics
         screenHeight = displayMetrics.heightPixels
         screenWidth = displayMetrics.widthPixels
         initialX = screenWidth / 2
         initialY = screenHeight / 2
         snakeSegments = mutableListOf(SnakeSegment(initialX, initialY))
-        val (newFoodX, newFoodY) = generateRandomCoords()
-        foodX = newFoodX
-        foodY = newFoodY
-
         binding.gameView.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(p0: SurfaceHolder) {
-                startGameLoop()
+                snakeViewModel = SnakeViewModel()
+                registerObservers(snakeViewModel)
+
+                snakeViewModel.startGame()
             }
 
             override fun surfaceChanged(p0: SurfaceHolder, p1: Int, p2: Int, p3: Int) {
@@ -69,7 +60,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun surfaceDestroyed(p0: SurfaceHolder) {
-                stopGameLoop()
             }
         })
 
@@ -85,123 +75,68 @@ class MainActivity : AppCompatActivity() {
     private fun changeDirection(newDirection: SnakeDirection) {
         if (currentDirection != newDirection) {
             currentDirection = newDirection
+            snakeViewModel.onUserInputReceived(newDirection)
         }
     }
 
-    private fun startGameLoop() {
-        running = true
-        gameRunnable = Runnable {
-            if (running) {
-                updateGame()
-                drawGame()
-                handler.postDelayed(gameRunnable, frameRate)
+    private fun registerObservers(viewModel: SnakeViewModel) {
+        viewModel.snakePositionLiveData.observe(this) {
+            val canvas = binding.gameView.holder.lockCanvas()
+
+            canvas.drawColor(Color.BLACK)
+
+            val snakePaint = Paint().apply {
+                color = Color.GREEN
+                style = Paint.Style.FILL
             }
-        }
-        handler.post(gameRunnable)
-    }
 
-    private fun stopGameLoop() {
-        running = false
-        handler.removeCallbacks(gameRunnable)
-    }
+            it.forEach { snakeSegments ->
+                val left = snakeSegments.x * CELL_SIZE
+                val top = snakeSegments.y * CELL_SIZE
+                val right = left + CELL_SIZE
+                val bottom = top + CELL_SIZE
 
-    private fun updateGame() {
-        if (movementProgress < 1.0f) {
-            // Calculate the next position based on movement progress
-            val nextX = lerp(previousX.toFloat(), snakeX.toFloat(), movementProgress)
-            val nextY = lerp(previousY.toFloat(), snakeY.toFloat(), movementProgress)
+                // Draw the cell using canvas.drawRect
+                canvas.drawRect(
+                    left.toFloat(),
+                    top.toFloat(),
+                    right.toFloat(),
+                    bottom.toFloat(),
+                    snakePaint,
+                )
 
-            // Update the snake's position
-            snakeX = nextX.toInt()
-            snakeY = nextY.toInt()
+            }
 
-            // Increment the movement progress
-            movementProgress += MOVEMENT_STEP
-        }
+            binding.gameView.holder.unlockCanvasAndPost(canvas)
 
-        when (currentDirection) {
-            SnakeDirection.DOWN -> snakeY += CELL_SIZE
-            SnakeDirection.UP -> snakeY -= CELL_SIZE
-            SnakeDirection.LEFT -> snakeX -= CELL_SIZE
-            SnakeDirection.RIGHT -> snakeX += CELL_SIZE
         }
 
-        for (i in snakeSegments.size - 1 downTo 1) {
-            snakeSegments[i] = snakeSegments[i - 1]
-        }
+        viewModel.foodPositionLiveData.observe(this) {
+            val canvas = binding.gameView.holder.lockCanvas()
+            val applePaint = Paint().apply {
+                color = Color.RED
+                style = Paint.Style.FILL
+            }
 
-        snakeSegments[0] = SnakeSegment(snakeX, snakeY)
-
-        if (snakeY < 0 || snakeY > screenHeight || snakeX < 0 || snakeX > screenWidth) {
-            stopGameLoop()
-            return
-        }
-
-        if (snakeX == foodX && snakeY == foodY) {
-            foodEaten()
-        }
-
-    }
-
-    private fun drawGame() {
-        val canvas = binding.gameView.holder.lockCanvas() ?: return
-
-        canvas.drawColor(Color.BLACK)
-
-        val snakePaint = Paint().apply {
-            color = Color.GREEN
-            style = Paint.Style.FILL
-        }
-
-        snakeSegments.forEach {
             canvas.drawRect(
                 it.x.toFloat(),
                 it.y.toFloat(),
-                (it.x + CELL_SIZE).toFloat(),
-                (it.y + CELL_SIZE).toFloat(),
-                snakePaint
+                (it.x + FOOD_RADIUS).toFloat(),
+                (it.y + FOOD_RADIUS).toFloat(),
+                applePaint
             )
+
+            binding.gameView.holder.unlockCanvasAndPost(canvas)
+
+
         }
-
-        val applePaint = Paint().apply {
-            color = Color.RED
-            style = Paint.Style.FILL
-        }
-
-        canvas.drawRect(
-            foodX.toFloat(),
-            foodY.toFloat(),
-            (foodX + FOOD_RADIUS).toFloat(),
-            (foodY + FOOD_RADIUS).toFloat(),
-            applePaint
-        )
-
-        binding.gameView.holder.unlockCanvasAndPost(canvas)
-    }
-
-    private fun foodEaten() {
-        snakeSegments.add(SnakeSegment(foodX, foodY))
-        val (newFoodX, newFoodY) = generateRandomCoords()
-        foodX = newFoodX
-        foodY = newFoodY
-    }
-
-    private fun generateRandomCoords(): Pair<Int, Int> {
-        val maxX = screenWidth / FOOD_RADIUS
-        val maxY = screenHeight / FOOD_RADIUS
-        val randomX = (0 until maxX).random() * FOOD_RADIUS
-        val randomY = (0 until maxY).random() * FOOD_RADIUS
-        return Pair(randomX, randomY)
     }
 
     private fun initGestureDectector() {
         gestureDetector =
             GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
                 override fun onFling(
-                    e1: MotionEvent,
-                    e2: MotionEvent,
-                    velocityX: Float,
-                    velocityY: Float
+                    e1: MotionEvent, e2: MotionEvent, velocityX: Float, velocityY: Float
                 ): Boolean {
                     val deltaX = e2.x - e1.x
                     val deltaY = e2.y - e1.y
@@ -233,7 +168,9 @@ class MainActivity : AppCompatActivity() {
                 override fun onSingleTapUp(event: MotionEvent): Boolean {
                     lateinit var direction: SnakeDirection
 
-                    if (currentDirection == SnakeDirection.LEFT || currentDirection == SnakeDirection.RIGHT) {
+                    if (currentDirection == SnakeDirection.LEFT ||
+                        currentDirection == SnakeDirection.RIGHT
+                    ) {
                         // Clicked over snake
                         if (event.y < snakeY + CELL_SIZE) {
                             direction = SnakeDirection.UP
@@ -242,7 +179,9 @@ class MainActivity : AppCompatActivity() {
                         else if (event.y > snakeY + CELL_SIZE) {
                             direction = SnakeDirection.DOWN
                         }
-                    } else if (currentDirection == SnakeDirection.UP || currentDirection == SnakeDirection.DOWN) {
+                    } else if (currentDirection == SnakeDirection.UP ||
+                        currentDirection == SnakeDirection.DOWN
+                    ) {
                         // Clicked left of snake
                         if (event.x < snakeX + CELL_SIZE) {
                             direction = SnakeDirection.LEFT
@@ -262,7 +201,4 @@ class MainActivity : AppCompatActivity() {
         private const val CELL_SIZE = 70
         private const val FOOD_RADIUS = 70
     }
-
-
-    data class SnakeSegment(val x: Int, val y: Int)
 }
