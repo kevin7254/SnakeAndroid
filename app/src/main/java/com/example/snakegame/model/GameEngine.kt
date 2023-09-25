@@ -9,6 +9,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -20,27 +22,27 @@ class GameEngine(
     private val snakeViewModel: SnakeViewModel,
 ) {
     private val mutex = Mutex()
-    private val mutableStateFlow: MutableStateFlow<State> = MutableStateFlow(
-        State(
-            food = Food(5, 5),
-            snake = listOf(SnakeSegment(2, 2)),
-            currentDirection = SnakeDirection.RIGHT,
-        )
-    )
-
     private val currentDirection = MutableLiveData<SnakeDirection>()
+    private val mutableStateFlow: MutableStateFlow<State> by lazy {
+        MutableStateFlow(
+            State(
+                food = Food(5, 5),
+                snake = listOf(SnakeSegment(2, 2)),
+                currentDirection = SnakeDirection.RIGHT,
+            )
+        )
+    }
 
-    internal val snakePositionLiveData = MutableLiveData<List<SnakeSegment>>()
+    internal val gameState: StateFlow<State>
+        get() = mutableStateFlow
 
-    internal val foodPositionLiveData = MutableLiveData<Food>()
-
-    val state: Flow<State> = mutableStateFlow
+    val state: Flow<State> = mutableStateFlow.asStateFlow()
 
     // internal val scoreLiveData = MutableLiveData<Int>() TODO
 
     // Function to update the LiveData properties when game state changes
     private fun updateGameState(state: State) {
-        snakePositionLiveData.value = state.snake
+        mutableStateFlow.value = state
         // foodPositionLiveData.value = state.food
         // _scoreLiveData.value = state.score
     }
@@ -72,8 +74,9 @@ class GameEngine(
         var snakeLength = 2
         scope.launch {
             while (true) {
-                delay(250)
+                delay(2500)
                 mutableStateFlow.update { state ->
+                    Log.d("Kevin", "state")
                     //Log.d("Kevin", state.toString())
                     val hasReachedLeftEnd =
                         (state.snake.first().x == 0) &&
@@ -115,7 +118,6 @@ class GameEngine(
                     }
 
                     if (newSnakePosition.areEqual(state.food)) {
-                        foodPositionLiveData.value = state.food
                         snakeViewModel.onFoodEaten()
                         snakeLength++
                     }
@@ -124,8 +126,7 @@ class GameEngine(
                         snakeLength = 2
                         snakeViewModel.onGameEnded()
                     }
-
-                    val s = (listOf(newSnakePosition) + state.snake.take(snakeLength - 1))
+                    Log.d("Kevin", "ascasdasd")
                     state.copy(
                         food = getFood(newSnakePosition, state.food),
                         snake = listOf(newSnakePosition) + state.snake.take(snakeLength - 1),

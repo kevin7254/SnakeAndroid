@@ -8,6 +8,8 @@ import com.example.snakegame.model.Food
 import com.example.snakegame.model.GameEngine
 import com.example.snakegame.model.SnakeDirection
 import com.example.snakegame.model.SnakeSegment
+import com.example.snakegame.model.State
+import kotlinx.coroutines.flow.StateFlow
 
 class SnakeViewModel : ViewModel() {
 
@@ -16,8 +18,10 @@ class SnakeViewModel : ViewModel() {
         snakeViewModel = this,
     )
 
-    val snakePositionLiveData: LiveData<List<SnakeSegment>> = gameEngine.snakePositionLiveData
-    val foodPositionLiveData: LiveData<Food> = gameEngine.foodPositionLiveData
+/*    val snakePositionLiveData: LiveData<List<SnakeSegment>> = gameEngine.snakePositionLiveData
+    val foodPositionLiveData: LiveData<Food> = gameEngine.foodPositionLiveData*/
+
+    val gameState: StateFlow<State> = gameEngine.gameState
     // val scoreLiveData: LiveData<Int> = gameEngine.scoreLiveData TODO
 
 

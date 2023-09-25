@@ -14,13 +14,14 @@ import kotlin.math.abs
 
 import com.example.snakegame.model.SnakeDirection
 import com.example.snakegame.model.SnakeSegment
+import com.example.snakegame.view.SnakeView
 import com.example.snakegame.viewmodel.SnakeViewModel
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var context: Context
     private lateinit var binding: ActivityMainBinding
-    private lateinit var snakeSegments: MutableList<SnakeSegment>
+    private lateinit var snakeView: SnakeView
     private lateinit var gestureDetector: GestureDetector
     private lateinit var snakeViewModel: SnakeViewModel
 
@@ -46,24 +47,21 @@ class MainActivity : AppCompatActivity() {
         screenWidth = displayMetrics.widthPixels
         initialX = screenWidth / 2
         initialY = screenHeight / 2
-        snakeSegments = mutableListOf(SnakeSegment(initialX, initialY))
-        binding.gameView.holder.addCallback(object : SurfaceHolder.Callback {
-            override fun surfaceCreated(p0: SurfaceHolder) {
-                snakeViewModel = SnakeViewModel()
-                registerObservers(snakeViewModel)
-
-                snakeViewModel.startGame()
-            }
-
-            override fun surfaceChanged(p0: SurfaceHolder, p1: Int, p2: Int, p3: Int) {
-
-            }
-
-            override fun surfaceDestroyed(p0: SurfaceHolder) {
-            }
-        })
-
         initGestureDectector()
+
+        snakeView = SnakeView(this, null, binding.gameView.holder)
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        snakeView.surfaceCreated(snakeView.holder)
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        snakeView.surfaceDestroyed(snakeView.holder)
     }
 
 
@@ -79,7 +77,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun registerObservers(viewModel: SnakeViewModel) {
+   /* private fun registerObservers(viewModel: SnakeViewModel) {
         viewModel.snakePositionLiveData.observe(this) {
             val canvas = binding.gameView.holder.lockCanvas()
 
@@ -130,7 +128,7 @@ class MainActivity : AppCompatActivity() {
 
 
         }
-    }
+    }*/
 
     private fun initGestureDectector() {
         gestureDetector =
