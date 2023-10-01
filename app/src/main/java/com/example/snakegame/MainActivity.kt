@@ -1,19 +1,17 @@
 package com.example.snakegame
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Paint
+import android.graphics.PixelFormat
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
-import android.view.SurfaceHolder
+import android.view.View
 import com.example.snakegame.databinding.ActivityMainBinding
 import kotlin.math.abs
 
 import com.example.snakegame.model.SnakeDirection
-import com.example.snakegame.model.SnakeSegment
 import com.example.snakegame.view.SnakeView
 import com.example.snakegame.viewmodel.SnakeViewModel
 
@@ -24,6 +22,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var snakeView: SnakeView
     private lateinit var gestureDetector: GestureDetector
     private lateinit var snakeViewModel: SnakeViewModel
+    private val gridSizeX = 70
+    private val gridSizeY = 70
 
     private var initialX = 0
     private var initialY = 0
@@ -33,11 +33,15 @@ class MainActivity : AppCompatActivity() {
     private var screenWidth = 0
     private var currentDirection = SnakeDirection.RIGHT // Initial direction
 
+    var cellSizeX = 0
+    var cellSizeY = 0
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         val view = binding.root
+
         setContentView(view)
 
         context = applicationContext
@@ -47,9 +51,15 @@ class MainActivity : AppCompatActivity() {
         screenWidth = displayMetrics.widthPixels
         initialX = screenWidth / 2
         initialY = screenHeight / 2
-        initGestureDectector()
 
-        snakeView = SnakeView(this, null, binding.gameView.holder)
+
+        cellSizeX = screenWidth / gridSizeX
+        cellSizeY = screenHeight / gridSizeY
+
+        Log.d("kevin", "x $cellSizeX y $cellSizeY")
+        initGestureDectector()
+        snakeViewModel = SnakeViewModel()
+        snakeView = SnakeView(this, null, binding.gameView.holder, snakeViewModel)
     }
 
     override fun onResume() {
@@ -76,59 +86,6 @@ class MainActivity : AppCompatActivity() {
             snakeViewModel.onUserInputReceived(newDirection)
         }
     }
-
-   /* private fun registerObservers(viewModel: SnakeViewModel) {
-        viewModel.snakePositionLiveData.observe(this) {
-            val canvas = binding.gameView.holder.lockCanvas()
-
-            canvas.drawColor(Color.BLACK)
-
-            val snakePaint = Paint().apply {
-                color = Color.GREEN
-                style = Paint.Style.FILL
-            }
-
-            it.forEach { snakeSegments ->
-                val left = snakeSegments.x * CELL_SIZE
-                val top = snakeSegments.y * CELL_SIZE
-                val right = left + CELL_SIZE
-                val bottom = top + CELL_SIZE
-
-                // Draw the cell using canvas.drawRect
-                canvas.drawRect(
-                    left.toFloat(),
-                    top.toFloat(),
-                    right.toFloat(),
-                    bottom.toFloat(),
-                    snakePaint,
-                )
-
-            }
-
-            binding.gameView.holder.unlockCanvasAndPost(canvas)
-
-        }
-
-        viewModel.foodPositionLiveData.observe(this) {
-            val canvas = binding.gameView.holder.lockCanvas()
-            val applePaint = Paint().apply {
-                color = Color.RED
-                style = Paint.Style.FILL
-            }
-
-            canvas.drawRect(
-                it.x.toFloat(),
-                it.y.toFloat(),
-                (it.x + FOOD_RADIUS).toFloat(),
-                (it.y + FOOD_RADIUS).toFloat(),
-                applePaint
-            )
-
-            binding.gameView.holder.unlockCanvasAndPost(canvas)
-
-
-        }
-    }*/
 
     private fun initGestureDectector() {
         gestureDetector =

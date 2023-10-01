@@ -15,29 +15,31 @@ import com.example.snakegame.model.State
 import com.example.snakegame.viewmodel.SnakeViewModel
 import kotlinx.coroutines.launch
 
-class SnakeView(context: Context, attributeSet: AttributeSet?, private val surfaceHolder: SurfaceHolder) : SurfaceView(context, attributeSet),
+class SnakeView(
+    context: Context,
+    attributeSet: AttributeSet?,
+    private val surfaceHolder: SurfaceHolder,
+    private val snakeViewModel: SnakeViewModel,
+) : SurfaceView(context, attributeSet),
     SurfaceHolder.Callback {
     private val paint = Paint()
     private val cellSize = 70
 
-    private lateinit var snakeViewModel: SnakeViewModel
 
     init {
         surfaceHolder.addCallback(this)
         paint.color = Color.GREEN
+
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
-        snakeViewModel = SnakeViewModel()
         snakeViewModel.startGame()
         val lifecycleOwner = context as? LifecycleOwner
         lifecycleOwner?.lifecycleScope?.launch {
-            /*snakeViewModel.gameState.collect {
-                Log.d("Kevin", "$it")
+            snakeViewModel.gameState.collect {
                 drawGame(it)
-            }*/
+            }
         }
-
 
 
     }
@@ -51,9 +53,11 @@ class SnakeView(context: Context, attributeSet: AttributeSet?, private val surfa
     }
 
     private fun drawGame(gameState: State) {
+        Log.d("Kevin", gameState.snake.toString())
 
         val canvas = surfaceHolder.lockCanvas() ?: return
-        canvas.drawColor(Color.BLACK)
+
+        canvas.drawColor(Color.parseColor("#242424"))
 
         val snakePaint = Paint().apply {
             color = Color.GREEN
@@ -88,6 +92,13 @@ class SnakeView(context: Context, attributeSet: AttributeSet?, private val surfa
             (gameState.food.y + cellSize).toFloat(),
             applePaint
         )
+
+        val borderPaint = Paint().apply {
+            color = Color.BLACK
+            style = Paint.Style.STROKE
+            strokeWidth = 10f // e.g., 10f
+        }
+        canvas.drawRect(0f, 0f, canvas.width.toFloat(), canvas.height.toFloat(), borderPaint)
 
         surfaceHolder.unlockCanvasAndPost(canvas)
 

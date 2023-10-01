@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -33,20 +34,16 @@ class GameEngine(
         )
     }
 
-    internal val gameState: StateFlow<State>
-        get() = mutableStateFlow
+    /*
+        internal val gameState: StateFlow<State>
+            get() = mutableStateFlow
+    */
 
-    val state: Flow<State> = mutableStateFlow.asStateFlow()
+    val state: StateFlow<State> = mutableStateFlow.asStateFlow()
 
     // internal val scoreLiveData = MutableLiveData<Int>() TODO
 
     // Function to update the LiveData properties when game state changes
-    private fun updateGameState(state: State) {
-        mutableStateFlow.value = state
-        // foodPositionLiveData.value = state.food
-        // _scoreLiveData.value = state.score
-    }
-
 
     var move = Pair(1, 0)
         set(value) {
@@ -74,10 +71,8 @@ class GameEngine(
         var snakeLength = 2
         scope.launch {
             while (true) {
-                delay(2500)
+                delay(250)
                 mutableStateFlow.update { state ->
-                    Log.d("Kevin", "state")
-                    //Log.d("Kevin", state.toString())
                     val hasReachedLeftEnd =
                         (state.snake.first().x == 0) &&
                                 state.currentDirection == SnakeDirection.LEFT
@@ -85,10 +80,10 @@ class GameEngine(
                         (state.snake.first().y == 0) &&
                                 state.currentDirection == SnakeDirection.UP
                     val hasReachedRightEnd =
-                        (state.snake.first().x == BOARD_SIZE - 1) &&
+                        (state.snake.first().x == 15 - 1) &&
                                 state.currentDirection == SnakeDirection.RIGHT
                     val hasReachedBottomEnd =
-                        (state.snake.first().y == BOARD_SIZE - 1) &&
+                        (state.snake.first().y == 30 - 1) &&
                                 state.currentDirection == SnakeDirection.DOWN
 
                     if (hasReachedLeftEnd || hasReachedTopEnd ||
@@ -126,12 +121,11 @@ class GameEngine(
                         snakeLength = 2
                         snakeViewModel.onGameEnded()
                     }
-                    Log.d("Kevin", "ascasdasd")
                     state.copy(
                         food = getFood(newSnakePosition, state.food),
                         snake = listOf(newSnakePosition) + state.snake.take(snakeLength - 1),
                         currentDirection = currentDirection.value!!,
-                    ).also { updateGameState(it) }
+                    )
                 }
             }
         }

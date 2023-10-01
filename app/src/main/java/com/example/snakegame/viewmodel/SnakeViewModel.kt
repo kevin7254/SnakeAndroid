@@ -1,13 +1,10 @@
 package com.example.snakegame.viewmodel
 
 import android.util.Log
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.snakegame.model.Food
 import com.example.snakegame.model.GameEngine
 import com.example.snakegame.model.SnakeDirection
-import com.example.snakegame.model.SnakeSegment
 import com.example.snakegame.model.State
 import kotlinx.coroutines.flow.StateFlow
 
@@ -18,15 +15,11 @@ class SnakeViewModel : ViewModel() {
         snakeViewModel = this,
     )
 
-/*    val snakePositionLiveData: LiveData<List<SnakeSegment>> = gameEngine.snakePositionLiveData
-    val foodPositionLiveData: LiveData<Food> = gameEngine.foodPositionLiveData*/
-
-    val gameState: StateFlow<State> = gameEngine.gameState
+    val gameState: StateFlow<State> = gameEngine.state
     // val scoreLiveData: LiveData<Int> = gameEngine.scoreLiveData TODO
 
 
     fun onUserInputReceived(direction: SnakeDirection) {
-        Log.d("Kevin", direction.toString())
         when (direction) {
             SnakeDirection.UP -> gameEngine.move = Pair(0, -1)
             SnakeDirection.LEFT -> gameEngine.move = Pair(-1, 0)
@@ -45,7 +38,7 @@ class SnakeViewModel : ViewModel() {
 
 
     fun onGameEnded() {
-
+        Log.d("Kevin", "ended")
     }
 
 
@@ -62,6 +55,4 @@ class SnakeViewModel : ViewModel() {
         super.onCleared()
         //  gameEngine.stopGame()
     }
-
-
 }
