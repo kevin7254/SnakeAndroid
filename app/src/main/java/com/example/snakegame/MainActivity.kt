@@ -1,13 +1,11 @@
 package com.example.snakegame
 
 import android.content.Context
-import android.graphics.PixelFormat
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
-import android.view.View
 import com.example.snakegame.databinding.ActivityMainBinding
 import kotlin.math.abs
 
@@ -33,8 +31,8 @@ class MainActivity : AppCompatActivity() {
     private var screenWidth = 0
     private var currentDirection = SnakeDirection.RIGHT // Initial direction
 
-    var cellSizeX = 0
-    var cellSizeY = 0
+    private var cellSizeX = 0
+    private var cellSizeY = 0
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +54,6 @@ class MainActivity : AppCompatActivity() {
         cellSizeX = screenWidth / gridSizeX
         cellSizeY = screenHeight / gridSizeY
 
-        Log.d("kevin", "x $cellSizeX y $cellSizeY")
         initGestureDectector()
         snakeViewModel = SnakeViewModel()
         snakeView = SnakeView(this, null, binding.gameView.holder, snakeViewModel)
@@ -64,8 +61,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-
-        snakeView.surfaceCreated(snakeView.holder)
     }
 
     override fun onPause() {

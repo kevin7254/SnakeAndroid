@@ -1,6 +1,5 @@
 package com.example.snakegame.view
 
-import android.app.GameState
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Paint
@@ -10,7 +9,6 @@ import android.view.SurfaceHolder
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import android.view.SurfaceView
-import com.example.snakegame.MainActivity
 import com.example.snakegame.model.State
 import com.example.snakegame.viewmodel.SnakeViewModel
 import kotlinx.coroutines.launch
@@ -25,11 +23,9 @@ class SnakeView(
     private val paint = Paint()
     private val cellSize = 70
 
-
     init {
         surfaceHolder.addCallback(this)
         paint.color = Color.GREEN
-
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
@@ -40,8 +36,6 @@ class SnakeView(
                 drawGame(it)
             }
         }
-
-
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -52,9 +46,7 @@ class SnakeView(
         Log.d("Kevin", Thread.currentThread().name)
     }
 
-    private fun drawGame(gameState: State) {
-        Log.d("Kevin", gameState.snake.toString())
-
+    private suspend fun drawGame(gameState: State) {
         val canvas = surfaceHolder.lockCanvas() ?: return
 
         canvas.drawColor(Color.parseColor("#242424"))
@@ -85,11 +77,16 @@ class SnakeView(
             )
         }
 
+        val leftFood = gameState.food.x * cellSize
+        val topFood = gameState.food.y * cellSize
+        val rightFood = leftFood + cellSize
+        val bottomFood = topFood + cellSize
+
         canvas.drawRect(
-            gameState.food.x.toFloat(),
-            gameState.food.y.toFloat(),
-            (gameState.food.x + cellSize).toFloat(),
-            (gameState.food.y + cellSize).toFloat(),
+            leftFood.toFloat(),
+            topFood.toFloat(),
+            rightFood.toFloat(),
+            bottomFood.toFloat(),
             applePaint
         )
 
@@ -101,6 +98,5 @@ class SnakeView(
         canvas.drawRect(0f, 0f, canvas.width.toFloat(), canvas.height.toFloat(), borderPaint)
 
         surfaceHolder.unlockCanvasAndPost(canvas)
-
     }
 }

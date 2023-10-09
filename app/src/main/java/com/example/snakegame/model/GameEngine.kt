@@ -1,17 +1,13 @@
 package com.example.snakegame.model
 
 import android.util.Log
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import com.example.snakegame.viewmodel.SnakeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -22,6 +18,7 @@ class GameEngine(
     private val scope: CoroutineScope,
     private val snakeViewModel: SnakeViewModel,
 ) {
+    private var isGameRunning = false
     private val mutex = Mutex()
     private val currentDirection = MutableLiveData<SnakeDirection>()
     private val mutableStateFlow: MutableStateFlow<State> by lazy {
@@ -68,9 +65,11 @@ class GameEngine(
 
 
     internal fun startGame() {
+        Log.d("Kevin", "START")
         var snakeLength = 2
+        isGameRunning = true
         scope.launch {
-            while (true) {
+            while (isGameRunning) {
                 delay(250)
                 mutableStateFlow.update { state ->
                     val hasReachedLeftEnd =
@@ -89,8 +88,9 @@ class GameEngine(
                     if (hasReachedLeftEnd || hasReachedTopEnd ||
                         hasReachedRightEnd || hasReachedBottomEnd
                     ) {
-                        snakeLength = 2
+                      //  snakeLength = 2
                         snakeViewModel.onGameEnded()
+                        isGameRunning = false
                     }
 
                     if (move.first == 0 && move.second == -1) {
@@ -113,14 +113,18 @@ class GameEngine(
                     }
 
                     if (newSnakePosition.areEqual(state.food)) {
+                        Log.d("Kevin", "food eaten")
                         snakeViewModel.onFoodEaten()
                         snakeLength++
                     }
 
                     if (state.snake.contains(newSnakePosition)) {
-                        snakeLength = 2
+                      //  snakeLength = 2
                         snakeViewModel.onGameEnded()
+                        isGameRunning = false
+
                     }
+                    Log.d("Kevin", state.toString())
                     state.copy(
                         food = getFood(newSnakePosition, state.food),
                         snake = listOf(newSnakePosition) + state.snake.take(snakeLength - 1),
@@ -134,7 +138,7 @@ class GameEngine(
 
     private fun getFood(snakeSegment: SnakeSegment, food: Food): Food {
         return if (snakeSegment.areEqual(food)) Food(
-            Random.nextInt(BOARD_SIZE), Random.nextInt(BOARD_SIZE)
+            Random.nextInt(15), Random.nextInt(30)
         )
         else food
     }
@@ -142,5 +146,4 @@ class GameEngine(
     companion object {
         const val BOARD_SIZE = 70
     }
-
 }
