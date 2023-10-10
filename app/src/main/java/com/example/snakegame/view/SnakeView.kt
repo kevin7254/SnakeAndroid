@@ -9,10 +9,14 @@ import android.view.SurfaceHolder
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import android.view.SurfaceView
+import com.example.snakegame.model.Constants.CELL_SIZE
 import com.example.snakegame.model.State
 import com.example.snakegame.viewmodel.SnakeViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * The class responsible for everything UI-related.
+ */
 class SnakeView(
     context: Context,
     attributeSet: AttributeSet?,
@@ -21,7 +25,6 @@ class SnakeView(
 ) : SurfaceView(context, attributeSet),
     SurfaceHolder.Callback {
     private val paint = Paint()
-    private val cellSize = 70
 
     init {
         surfaceHolder.addCallback(this)
@@ -46,7 +49,10 @@ class SnakeView(
         Log.d("Kevin", Thread.currentThread().name)
     }
 
-    private suspend fun drawGame(gameState: State) {
+    /**
+     * Logic for drawing the snake and food.
+     */
+    private fun drawGame(gameState: State) {
         val canvas = surfaceHolder.lockCanvas() ?: return
 
         canvas.drawColor(Color.parseColor("#242424"))
@@ -62,10 +68,10 @@ class SnakeView(
         }
 
         gameState.snake.forEach {
-            val left = it.x * cellSize
-            val top = it.y * cellSize
-            val right = left + cellSize
-            val bottom = top + cellSize
+            val left = it.x * CELL_SIZE
+            val top = it.y * CELL_SIZE
+            val right = left + CELL_SIZE
+            val bottom = top + CELL_SIZE
 
             // Draw the cell using canvas.drawRect
             canvas.drawRect(
@@ -77,10 +83,10 @@ class SnakeView(
             )
         }
 
-        val leftFood = gameState.food.x * cellSize
-        val topFood = gameState.food.y * cellSize
-        val rightFood = leftFood + cellSize
-        val bottomFood = topFood + cellSize
+        val leftFood = gameState.food.x * CELL_SIZE
+        val topFood = gameState.food.y * CELL_SIZE
+        val rightFood = leftFood + CELL_SIZE
+        val bottomFood = topFood + CELL_SIZE
 
         canvas.drawRect(
             leftFood.toFloat(),
@@ -93,10 +99,15 @@ class SnakeView(
         val borderPaint = Paint().apply {
             color = Color.BLACK
             style = Paint.Style.STROKE
-            strokeWidth = 10f // e.g., 10f
+            strokeWidth = 10f
         }
-        canvas.drawRect(0f, 0f, canvas.width.toFloat(), canvas.height.toFloat(), borderPaint)
-
+        canvas.drawRect(
+            0f,
+            0f,
+            canvas.width.toFloat(),
+            canvas.height.toFloat(),
+            borderPaint,
+        )
         surfaceHolder.unlockCanvasAndPost(canvas)
     }
 }

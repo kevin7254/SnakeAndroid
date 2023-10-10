@@ -7,12 +7,16 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import com.example.snakegame.databinding.ActivityMainBinding
+import com.example.snakegame.model.Constants.CELL_SIZE
 import kotlin.math.abs
 
 import com.example.snakegame.model.SnakeDirection
 import com.example.snakegame.view.SnakeView
 import com.example.snakegame.viewmodel.SnakeViewModel
 
+/**
+ * The main activity for the Snake Game.
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var context: Context
@@ -20,8 +24,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var snakeView: SnakeView
     private lateinit var gestureDetector: GestureDetector
     private lateinit var snakeViewModel: SnakeViewModel
-    private val gridSizeX = 70
-    private val gridSizeY = 70
 
     private var initialX = 0
     private var initialY = 0
@@ -51,10 +53,10 @@ class MainActivity : AppCompatActivity() {
         initialY = screenHeight / 2
 
 
-        cellSizeX = screenWidth / gridSizeX
-        cellSizeY = screenHeight / gridSizeY
+        cellSizeX = screenWidth / CELL_SIZE
+        cellSizeY = screenHeight / CELL_SIZE
 
-        initGestureDectector()
+        initializeSwipeDetection()
         snakeViewModel = SnakeViewModel()
         snakeView = SnakeView(this, null, binding.gameView.holder, snakeViewModel)
     }
@@ -65,7 +67,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-
         snakeView.surfaceDestroyed(snakeView.holder)
     }
 
@@ -82,7 +83,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun initGestureDectector() {
+    /**
+     * Logic needed for detecting swipes for changing the snake's direction
+     */
+    private fun initializeSwipeDetection() {
         gestureDetector =
             GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
                 override fun onFling(
@@ -94,20 +98,16 @@ class MainActivity : AppCompatActivity() {
                     if (abs(deltaX) > abs(deltaY) && abs(deltaX) > 100 && abs(velocityX) > 100) {
                         //Horizontal swipe
                         if (deltaX > 0) {
-                            Log.d(Companion::class.java.toString(), "action right move")
                             changeDirection(SnakeDirection.RIGHT)
                         } else {
-                            Log.d(Companion::class.java.toString(), "action left move")
                             changeDirection(SnakeDirection.LEFT)
                         }
                         return true
                     } else if (abs(deltaY) > 100 && abs(velocityY) > 100) {
                         //Vertical swipe
                         if (deltaY > 0) {
-                            Log.d(Companion::class.java.toString(), "action down move")
                             changeDirection(SnakeDirection.DOWN)
                         } else {
-                            Log.d(Companion::class.java.toString(), "action up move")
                             changeDirection(SnakeDirection.UP)
                         }
                         return true
@@ -145,10 +145,5 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
             })
-    }
-
-    companion object {
-        private const val CELL_SIZE = 70
-        private const val FOOD_RADIUS = 70
     }
 }

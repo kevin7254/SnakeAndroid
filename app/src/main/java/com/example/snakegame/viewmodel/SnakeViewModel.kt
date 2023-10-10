@@ -1,6 +1,7 @@
 package com.example.snakegame.viewmodel
 
 import android.util.Log
+import androidx.annotation.MainThread
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.snakegame.model.GameEngine
@@ -15,11 +16,17 @@ class SnakeViewModel : ViewModel() {
         snakeViewModel = this,
     )
 
-    val gameState: StateFlow<State> = gameEngine.state
+    /**
+     * The state of the game that can be collected by subscribers.
+     */
+    internal val gameState: StateFlow<State> = gameEngine.state
     // val scoreLiveData: LiveData<Int> = gameEngine.scoreLiveData TODO
 
-
-    fun onUserInputReceived(direction: SnakeDirection) {
+    /**
+     * Transforms the [SnakeDirection] so the [GameEngine] understands it.
+     */
+    @MainThread
+    internal fun onUserInputReceived(direction: SnakeDirection) {
         when (direction) {
             SnakeDirection.UP -> gameEngine.move = Pair(0, -1)
             SnakeDirection.LEFT -> gameEngine.move = Pair(-1, 0)
@@ -28,24 +35,44 @@ class SnakeViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Starts the game.
+     *
+     * This function should always be used to start the game.
+     */
+    @MainThread
     fun startGame() {
         gameEngine.startGame()
     }
 
+    /**
+     * Pauses the game.
+     *
+     * This function should always be used to start the game.
+     */
+    @MainThread
     fun pauseGame() {
         //gameEngine.pauseGame()
     }
 
-
+    /**
+     * Tells observers that the game has ended.
+     */
+    @MainThread
     fun onGameEnded() {
         Log.d("Kevin", "ended")
     }
 
 
+    @MainThread
     fun startNewGame() {
         //  gameEngine.resetGame()
     }
 
+    /**
+     * Tells observers that the food has been eaten.
+     */
+    @MainThread
     fun onFoodEaten() {
         //score++
     }

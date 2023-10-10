@@ -1,6 +1,6 @@
 package com.example.snakegame.model
 
-import android.util.Log
+import androidx.annotation.MainThread
 import androidx.lifecycle.MutableLiveData
 import com.example.snakegame.viewmodel.SnakeViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -14,6 +14,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
 
+/**
+ * The Game Engine, taking care of all the game logic such as moving each [SnakeSegment],
+ * keeping track of the [Food] and so on.
+ *
+ * Uses an internal [State] for keeping track of everything.
+ *
+ * @param scope the scope tied to the [SnakeViewModel]
+ * @param snakeViewModel the ViewModel.
+ */
 class GameEngine(
     private val scope: CoroutineScope,
     private val snakeViewModel: SnakeViewModel,
@@ -31,18 +40,17 @@ class GameEngine(
         )
     }
 
-    /*
-        internal val gameState: StateFlow<State>
-            get() = mutableStateFlow
-    */
+    /**
+     * The state of the game that can be collected by subscribers.
+     */
+    internal val state: StateFlow<State> = mutableStateFlow.asStateFlow()
 
-    val state: StateFlow<State> = mutableStateFlow.asStateFlow()
-
-    // internal val scoreLiveData = MutableLiveData<Int>() TODO
-
-    // Function to update the LiveData properties when game state changes
-
-    var move = Pair(1, 0)
+    /**
+     * Used to keep track of which way the Snake is moving.
+     *
+     * Ex: (0,-1) - the Snake moves upwards. (y is decreasing)
+     */
+    internal var move = Pair(1, 0)
         set(value) {
             scope.launch {
                 mutex.withLock {
@@ -51,7 +59,11 @@ class GameEngine(
             }
         }
 
-    fun reset() {
+    /**
+     * Resets the game to it's original state.
+     */
+    @MainThread
+    internal fun reset() {
         mutableStateFlow.update {
             it.copy(
                 food = Food(5, 5),
@@ -63,9 +75,13 @@ class GameEngine(
         move = Pair(1, 0)
     }
 
-
+    /**
+     * Starts the the main loop - which performs all the game logic.
+     *
+     * Uses a [CoroutineScope] which is thread safe - it will always run on the Main Thread.
+     */
+    @MainThread
     internal fun startGame() {
-        Log.d("Kevin", "START")
         var snakeLength = 2
         isGameRunning = true
         scope.launch {
@@ -88,7 +104,7 @@ class GameEngine(
                     if (hasReachedLeftEnd || hasReachedTopEnd ||
                         hasReachedRightEnd || hasReachedBottomEnd
                     ) {
-                      //  snakeLength = 2
+                        snakeLength = 2
                         snakeViewModel.onGameEnded()
                         isGameRunning = false
                     }
@@ -112,19 +128,17 @@ class GameEngine(
                         }
                     }
 
-                    if (newSnakePosition.areEqual(state.food)) {
-                        Log.d("Kevin", "food eaten")
+                    if (isSamePosition(newSnakePosition, state.food)) {
                         snakeViewModel.onFoodEaten()
                         snakeLength++
                     }
 
                     if (state.snake.contains(newSnakePosition)) {
-                      //  snakeLength = 2
+                        snakeLength = 2
                         snakeViewModel.onGameEnded()
                         isGameRunning = false
 
                     }
-                    Log.d("Kevin", state.toString())
                     state.copy(
                         food = getFood(newSnakePosition, state.food),
                         snake = listOf(newSnakePosition) + state.snake.take(snakeLength - 1),
@@ -135,15 +149,10 @@ class GameEngine(
         }
     }
 
-
     private fun getFood(snakeSegment: SnakeSegment, food: Food): Food {
-        return if (snakeSegment.areEqual(food)) Food(
-            Random.nextInt(15), Random.nextInt(30)
+        return if (isSamePosition(snakeSegment, food)) Food(
+            Random.nextInt(15 - 1), Random.nextInt(30 - 1)
         )
         else food
-    }
-
-    companion object {
-        const val BOARD_SIZE = 70
     }
 }
